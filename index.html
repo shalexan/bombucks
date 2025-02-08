@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cells</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: radial-gradient(circle at top left, #1c1c1c, #0f0f0f); /* Фон в темных тонах */
+            color: white;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .grid-container {
+            width: 400px;
+            height: 350px; /* Увеличенная высота для области */
+            overflow: auto; /* Оставляем прокрутку */
+            border: 2px solid #000;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .grid {
+            display: grid;
+            gap: 10px;
+            justify-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid #000;
+            border-radius: 15px;
+            background-color: #333;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .cell::before {
+            content: '';
+            display: block;
+            width: 80%;
+            height: 80%;
+            background-color: #333;
+            border-radius: 50%;
+            border: 2px solid #555;
+            transition: all 0.3s ease;
+        }
+
+        .active::before {
+            background-color: #00ff00;
+            border: none;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 18px;
+            width: 200px; /* Увеличенная ширина кнопок */
+            cursor: pointer;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        /* Зеленая кнопка всегда зеленая */
+        button.green {
+            background-color: #28a745 !important;
+        }
+
+        /* Анимация нажатия кнопок */
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        select {
+            padding: 15px;
+            font-size: 18px;
+            width: 200px;
+        }
+
+        /* Увеличенные размеры ячеек для выбора 3x2 и уменьшенный зазор */
+        .grid[data-size="3x2"] .cell {
+            width: 120px; /* Увеличенные ячейки */
+            height: 120px;
+            margin: 2px; /* Уменьшенный зазор между столбиками */
+        }
+
+        /* Размеры ячеек для других сеток */
+        .grid[data-size="6x3"] .cell,
+        .grid[data-size="9x4"] .cell {
+            width: 80px;
+            height: 80px;
+        }
+
+        .grid[data-size="12x5"] .cell {
+            width: 60px;
+            height: 60px;
+        }
+
+        .grid[data-size="15x6"] .cell {
+            width: 50px;
+            height: 50px;
+        }
+
+        /* Адаптация для мобильных устройств */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            .grid-container {
+                width: 95vw;
+                height: 320px; /* Увеличенная высота для мобильных */
+            }
+
+            .cell {
+                width: 50px;
+                height: 50px;
+            }
+
+            .grid {
+                gap: 5px;
+            }
+
+            button {
+                padding: 18px 25px; /* Увеличенные кнопки для мобильных */
+                font-size: 18px;
+                width: 100%; /* Кнопки занимают всю ширину */
+            }
+
+            select {
+                padding: 12px;
+                font-size: 16px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Заголовок -->
+    <h1>📈 HUN$GO MINES BOT</h1>
+
+    <!-- Контейнер для сетки с прокруткой, располагаем над кнопками -->
+    <div class="grid-container">
+        <div id="gridContainer" class="grid" data-size="3x2"></div>
+    </div>
+
+    <div class="controls">
+        <select id="gridSize">
+            <option value="3x2">3x2</option>
+            <option value="6x3">6x3</option>
+            <option value="9x4">9x4</option>
+            <option value="12x5">12x5</option>
+            <option value="15x6">15x6</option>
+        </select>
+        <button class="green" onclick="openNextCell()">Open cell</button> <!-- Зеленая кнопка -->
+        <button onclick="resetGrid()">Reset</button>
+    </div>
+
+    <script>
+        let currentRow = 0;
+        let rows = 3;
+        let cols = 2;
+        let gridCells = [];
+
+        const gridContainer = document.getElementById('gridContainer');
+        const gridWrapper = document.querySelector('.grid-container');
+
+        document.getElementById('gridSize').addEventListener('change', function() {
+            const [newRows, newCols] = this.value.split('x').map(Number);
+            rows = newRows;
+            cols = newCols;
+            createGrid(rows, cols);
+        });
+
+        function createGrid(rows, cols) {
+            currentRow = 0;
+            gridContainer.innerHTML = ''; // Очищаем контейнер
+            gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridContainer.dataset.size = `${rows}x${cols}`;
+
+            gridCells = []; // Очищаем массив с ячейками
+
+            // Создаем ячейки
+            for (let r = 0; r < rows; r++) {
+                let row = [];
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    gridContainer.appendChild(cell);
+                    row.push(cell);
+                }
+                gridCells.push(row);
+            }
+
+            // Если сетка большая (12x5 или 15x6), ограничиваем высоту и добавляем прокрутку
+            if (rows >= 12 || cols >= 5) {
+                gridWrapper.style.overflow = 'auto';
+            } else {
+                gridWrapper.style.overflow = 'hidden';
+            }
+        }
+
+        function smoothScrollTo(target, duration) {
+            const start = gridWrapper.scrollTop;
+            const targetPosition = target.getBoundingClientRect().top + gridWrapper.scrollTop - gridWrapper.getBoundingClientRect().top;
+            const distance = targetPosition - start;
+            let startTime = null;
+
+            function animation(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const run = ease(timeElapsed, start, distance, duration);
+                gridWrapper.scrollTop = run;
+                if (timeElapsed < duration) requestAnimationFrame(animation);
+            }
+
+            function ease(t, b, c, d) {
+                t /= d / 2;
+                if (t < 1) return c / 2 * t * t + b;
+                t--;
+                return -c / 2 * (t * (t - 2) - 1) + b;
+            }
+
+            requestAnimationFrame(animation);
+        }
+
+        function openNextCell() {
+            const reversedRow = rows - currentRow - 1;
+            if (reversedRow < 0) return;
+
+            const currentRowCells = gridCells[reversedRow];
+            const availableCells = currentRowCells.filter(cell => !cell.classList.contains('active'));
+
+            if (availableCells.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableCells.length);
+                const selectedCell = availableCells[randomIndex];
+                selectedCell.classList.add('active');
+                currentRow++;
+
+                // Плавная прокрутка до активной ячейки
+                smoothScrollTo(selectedCell, 1000); // 1 секунда прокрутки
+            }
+        }
+
+        function resetGrid() {
+            gridCells.flat().forEach(cell => cell.classList.remove('active'));
+            currentRow = 0;
+            gridWrapper.scrollTop = 0;
+        }
+
+        // Инициализация первой сетки
+        createGrid(rows, cols);
+    </script>
+</body>
+</html>
